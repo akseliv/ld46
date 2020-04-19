@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.22.0/dist/phaser.min.js"></script>
+</head>
+<body style="background-color: gray">
+
+<script>
+    var config = {
+        type: Phaser.WEBGL,
+        width: 64,
+        height: 64,
+        parent: 'phaser-example',
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        },
+        scale: {
+            parent: 'phaser-example',
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+        },
+        antialias: false,
+        pixelArt: true
+    };
+
+    var game = new Phaser.Game(config);
+    //game.renderer.renderSession.roundPixels = true;
+    var reversed = 0;
+    var paused = false;
+    var drops = [];
+
+    function preload ()
+    {
+        this.load.audio('theme', [
+            'heart.mp3'
+        ]);
+
+        this.load.image('heart', 'heart.png');
+        this.load.image('human', 'human.png');
+        this.load.image('drop', 'drop.png');
+        this.load.image('drop', 'drop.png');
+        this.angle1 = 0;
+    }
+
+    function create ()
+    {
+        var music = this.sound.add('theme');
+        //music.play();
+
+        this.path = 0;
+        this.pathLen = 96;
+        this.humanSpeed = 0.64;
+        this.spriteHeart = this.add.sprite(32, 32, 'heart').setInteractive();
+        this.spriteHuman = this.add.sprite(16, 16, 'human').setInteractive();
+
+        var tween = this.tweens.add({
+            targets: this.spriteHeart,
+            scale: 2,
+            duration: 428,
+            ease: 'Sine.easeInOut',
+            yoyo: true,
+            delay: 0,
+            repeat: -1
+        });
+
+        this.spriteHeart.on('pointerdown', function (pointer){
+            paused = true;
+            tween.pause();
+            music.setRate(0.5);
+        })
+
+        this.spriteHeart.on('pointerup', function (pointer){
+            console.log('reverse', reversed)
+            paused = false;
+            reversed = !reversed;
+            tween.resume();
+            music.setRate(1.0)
+            this.clearTint();
+        });
+
+        var timer = this.time.addEvent({
+            delay: 852,                // ms
+            callback: onEvent,
+            //args: [],
+            callbackScope: this,
+            repeat: -1
+        });
+    }
+
+    function onEvent(){
+        if(!paused){
+            var spriteDrop = this.add.sprite(32, 32, 'drop').setInteractive();
+            spriteDrop.setScale(0.5);
+            var tween = this.tweens.add({
+                targets: spriteDrop,
+                scale: 1,
+                duration: 200,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                delay: 0,
+                repeat: -1
+            });
+            drops.push(spriteDrop);
+        }
+    }
+
+    function update () {
+        // player vs. drops
+        var human = this.spriteHuman;
+        drops.forEach(function(drop){
+            drop.y = drop.y+1;
+            var rect = drop.getBounds();
+            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect)){
+                console.log("hit drop");
+                drop.destroy();
+            }
+        });
+
+        if(paused){
+            var tint = Math.random() * 0xffffff;
+            this.spriteHeart.setTint(tint);
+            return;
+        }
+        if(reversed == 0){
+            if(this.path < 32){
+                this.spriteHuman.x += this.humanSpeed;    
+            }
+            if(this.path >= 32 && this.path < 64){
+                this.spriteHuman.y += this.humanSpeed;    
+            }
+            if(this.path >= 64 && this.path < 96){
+                this.spriteHuman.x -= this.humanSpeed;    
+            }
+            if(this.path >= 96 && this.path < 128){
+                this.spriteHuman.y -= this.humanSpeed;    
+            }
+            if(this.path >= 128){
+                this.path = 0;
+                this.spriteHuman.x = 16;
+                this.spriteHuman.y = 16;
+            }
+            this.path = this.path + this.humanSpeed;
+        }
+
+
+        if(reversed == 1){
+
+            if(this.path < 32){
+                this.spriteHuman.x -= this.humanSpeed;    
+            }
+            if(this.path >= 32 && this.path < 64){
+                this.spriteHuman.y -= this.humanSpeed;    
+            }
+            if(this.path >= 64 && this.path < 96){
+                this.spriteHuman.x += this.humanSpeed;    
+            }
+            if(this.path >= 96 && this.path <= 128){
+                this.spriteHuman.y += this.humanSpeed;    
+            }
+            if(this.path <= 0){
+                this.path = 128;
+                this.spriteHuman.x = 16;
+                this.spriteHuman.y = 16;
+            }
+            this.path = this.path - this.humanSpeed;
+        }
+
+    }
+
+    function addDrop(){
+        this.spriteDrop = this.add.sprite(32, 48, 'drop');
+        this.spriteDrop.setScale(0.64,0.64);
+    }
+</script>
+
+</body>
+<style>
+    html, body {margin: 0; height: 100%; overflow: hidden}
+</style>
+</html>
