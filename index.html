@@ -35,6 +35,8 @@
     var hattackRate = 0.08;
     var score = 0;
     var gameover = false;
+    var level = 1;
+    var gamestarted = false;
     function preload ()
     {
         scene = this;
@@ -108,6 +110,9 @@
         });
         var music = this.music;
         this.spriteHeart.on('pointerdown', function (pointer){
+            if(!gamestarted){
+                gamestarted = true;
+            }
             paused = true;
             scene.clickText.text = "";
             tween.pause();
@@ -126,15 +131,13 @@
         var dropTimer = this.time.addEvent({
             delay: 852,                // ms
             callback: dropEvent,
-            //args: [],
             callbackScope: this,
             repeat: -1
         });
 
-        var ghostTimer = this.time.addEvent({
+        this.ghostTimer = this.time.addEvent({
             delay: 3000,                // ms
             callback: ghostEvent,
-            //args: [],
             callbackScope: this,
             repeat: -1
         });
@@ -143,32 +146,36 @@
     }
 
     function ghostEvent() {
-        var x;
-        var y;
-        // 1 in 3 chance ghost comes from top
-        if(Phaser.Math.Between(0,2) == 1){
+        if(gamestarted){
+            var x;
+            var y;
+            var rnd = Phaser.Math.Between(0,3);
 
-            x = Phaser.Math.Between(0, 64);
-
-            y = 0;
-
-        }else{
-            //no ghosts from the bottom
-            y = 0;
-
-            if(Phaser.Math.Between(0,1) == 1){
+            if( rnd === 0){
+                x = Phaser.Math.Between(0,8);
+                y = 8;
+            }
+            if( rnd === 1){
+                x = Phaser.Math.Between(56,64)
+                y = 8;
+            }
+            if( rnd === 2){
                 x = 0;
-            }else{
+                y = Phaser.Math.Between(48,56);
+            }
+            if( rnd === 3){
                 x = 64;
+                y = Phaser.Math.Between(48,56);
             }
 
+            
+            var sprite = this.add.sprite(x,y,'ghost')
+            ghosts.push(sprite);
         }
-        var sprite = this.add.sprite(x,y,'ghost')
-        ghosts.push(sprite);
     }
 
     function dropEvent(){
-            var spriteDrop = this.add.sprite(32, 32, 'drop');
+            var spriteDrop = this.add.sprite(Phaser.Math.Between(16,56), 0, 'drop');
             spriteDrop.setScale(0.5);
             var tween = this.tweens.add({
                 targets: spriteDrop,
@@ -183,7 +190,17 @@
     }
 
     function update () {
-        if(!gameover && !paused){
+        if(score > 20 && level === 1){
+            level = 2;
+            scene.ghostTimer.destroy();
+            this.ghostTimer = this.time.addEvent({
+                delay: 2000,                // ms
+                callback: ghostEvent,
+                callbackScope: this,
+                repeat: -1
+            });
+        }
+        if(!gameover && !paused && gamestarted){
             score = score + 0.016;
             scene.scoreText.text = Math.floor(score);
         }
