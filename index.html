@@ -26,16 +26,16 @@
     };
 
     var game = new Phaser.Game(config);
-    //game.renderer.renderSession.roundPixels = true;
     var reversed = 0;
     var paused = false;
     var drops = [];
     var ghosts = [];
-    var ghostSpeed = 0.16;
+    var ghostSpeed = 0.12;
     var scene;
     var hattack = 0;
-    var hattackRate = 0.16;
-
+    var hattackRate = 0.08;
+    var score = 0;
+    var gameover = false;
     function preload ()
     {
         scene = this;
@@ -43,29 +43,60 @@
             'heart.mp3'
         ]);
 
+        this.load.audio('hit-ghost', [
+            'hit-ghost.wav'
+        ]);
+
+
+        this.load.audio('hit-drop', [
+            'drop.wav'
+        ]);
+
         this.load.image('heart', 'heart.png');
         this.load.image('human', 'human.png');
         this.load.image('drop', 'drop.png');
         this.load.image('ghost', 'ghost.png');
         this.angle1 = 0;
+        this.load.bitmapFont('nokia', 'nokia.png', 'nokia.xml');
     }
 
     function create ()
     {
+        // text setup
 
-        this.gameoverText = this.add.text(8, 24, 'game over',{ font: '8px Verdana' });
+        
+
+        this.gameoverText = this.add.bitmapText(0, 24,'nokia', 'game over',12).setInteractive();
         this.gameoverText.setVisible(false);
-        var text1 = this.add.text(0, -4, 'heart attack',{ font: '8px Verdana' });
-        this.music = this.sound.add('theme');
+        this.gameoverText.on('pointerdown',function(pointer){
+            location.reload();
+        });
+        
+        this.add.bitmapText(0, 0, 'nokia', 'heart break', 10);
+
+        this.scoreText = this.add.bitmapText(4, 54, 'nokia', 0, 8);
+
+        if(localStorage.getItem('hiscore')){
+            this.hiScoreText = this.add.bitmapText(16, 54,'nokia', Math.floor(localStorage.getItem('hiscore')),8);
+            this.hiScoreText.setTint(0xe91e62);
+        }
+        // sounds
+        this.music = this.sound.add('theme',{"loop": true});
         this.music.play();
 
+        this.sfxHitGhost = this.sound.add('hit-ghost');
+        this.sfxHitDrop = this.sound.add('hit-drop');
+
+        // hattack bar
         var graphics = this.add.graphics();
         graphics.fillStyle(0xe91e62, 1);
         this.hattackBar = graphics.fillRect(0, 0, 1, 4);
 
+        // variable setup
         this.path = 0;
         this.pathLen = 96;
         this.humanSpeed = 0.64;
+        //sprite setup
         this.spriteHeart = this.add.sprite(32, 32, 'heart').setInteractive();
         this.spriteHuman = this.add.sprite(16, 16, 'human');
 
@@ -103,7 +134,7 @@
         });
 
         var ghostTimer = this.time.addEvent({
-            delay: 2500,                // ms
+            delay: 3000,                // ms
             callback: ghostEvent,
             //args: [],
             callbackScope: this,
@@ -114,19 +145,16 @@
     function ghostEvent() {
         var x;
         var y;
-        if(Phaser.Math.Between(0,1) == 1){
+        // 1 in 3 chance ghost comes from top
+        if(Phaser.Math.Between(0,2) == 1){
 
             x = Phaser.Math.Between(0, 64);
 
-            if(Phaser.Math.Between(0,1) == 1){
-                y = 0;
-            }else{
-                y = 64;
-            }
+            y = 0;
 
         }else{
-
-            y = Phaser.Math.Between(0, 64);
+            //no ghosts from the bottom
+            y = 0;
 
             if(Phaser.Math.Between(0,1) == 1){
                 x = 0;
@@ -155,10 +183,23 @@
     }
 
     function update () {
+        if(!gameover && !paused){
+            score = score + 0.016;
+            scene.scoreText.text = Math.floor(score);
+        }
+        this.cameras.main.backgroundColor.setTo(0,0,0);
+        if(paused){
+            this.cameras.main.backgroundColor.setTo(Phaser.Math.Between(0,255),0,0);
+        }
         var heart = this.spriteHeart;
         var human = this.spriteHuman;
 
         this.hattackBar.scaleX = hattack;
+            this.hattackBar.fillStyle();
+        if(hattack > 54){
+            var tint = Math.random() * 0xffffff;
+            this.hattackBar.fillStyle(tint);
+        }
 
         if(hattack > 0){
             hattack = hattack - 0.004;
@@ -167,22 +208,27 @@
         if(hattack > 64){
             heart.destroy();
             human.destroy();
+            gameover = true;
             this.gameoverText.setVisible(true);
+            this.music.setRate(0.2);
+            if(score > localStorage.getItem('hiscore')){
+                localStorage.setItem('hiscore', score);
+            }
 
         }
-
 
         // drops
 
         drops.forEach(function(drop, i){
             drop.y = drop.y+1;
             var rect = drop.getBounds();
-            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect)){
+            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect) && human.alpha < 1){
                 console.log("hit drop");
+                scene.sfxHitDrop.play();
                 drops.splice(i,1);
                 drop.destroy();
                 if(human.alpha < 1){
-                    human.alpha = human.alpha + 0.25;
+                    human.alpha = 1;
                 }
 
             }
@@ -203,7 +249,8 @@
             var rect = ghost.getBounds(); 
             if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect) && human.alpha > 0.25){
                 console.log("hit ghost");
-                human.alpha = human.alpha - 0.25;
+                scene.sfxHitGhost.play();
+                human.alpha = 0.25;
                 ghosts.splice(i,1);
                 ghost.destroy();
             }
@@ -278,6 +325,7 @@
             repeat: 1
         });
         scene.music.setRate(0.5);
+
     }
 
     function unPause(heart){
