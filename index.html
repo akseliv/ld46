@@ -32,9 +32,11 @@
     var drops = [];
     var ghosts = [];
     var ghostSpeed = 0.16;
+    var scene;
 
     function preload ()
     {
+        scene = this;
         this.load.audio('theme', [
             'heart.mp3'
         ]);
@@ -158,7 +160,7 @@
         });
         // ghosts
         var heart = this.spriteHeart;
-        ghosts.forEach(function(ghost){
+        ghosts.forEach(function(ghost, i){
             if(ghost.x < heart.x){
                 ghost.x = ghost.x + ghostSpeed;
             } else {
@@ -172,11 +174,14 @@
             var rect = ghost.getBounds(); 
             if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect)){
                 console.log("hit ghost");
+                ghosts.splice(i,1);
                 ghost.destroy();
             }
             if(Phaser.Geom.Rectangle.Overlaps(heart.getBounds(), rect)){
                 console.log("ghost hit heart");
+                ghosts.splice(i,1);
                 ghost.destroy();
+                heartTakesHit(heart);
             }
         })
 
@@ -229,6 +234,24 @@
             this.path = this.path - this.humanSpeed;
         }
 
+    }
+
+    function heartTakesHit(heart){
+
+        paused = true;
+        scene.time.addEvent({
+            delay: 256,                // ms
+            callback: unPause,
+            args: [heart],
+            callbackScope: this,
+            repeat: 1
+        });
+    }
+
+    function unPause(heart){
+        console.log('unpaused')
+        heart.clearTint();
+        paused = false;
     }
 
     function addDrop(){
