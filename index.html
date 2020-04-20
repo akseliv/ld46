@@ -52,11 +52,16 @@
 
     function create ()
     {
+
         this.gameoverText = this.add.text(8, 24, 'game over',{ font: '8px Verdana' });
         this.gameoverText.setVisible(false);
         var text1 = this.add.text(0, -4, 'heart attack',{ font: '8px Verdana' });
-        var music = this.sound.add('theme');
-        //music.play();
+        this.music = this.sound.add('theme');
+        this.music.play();
+
+        var graphics = this.add.graphics();
+        graphics.fillStyle(0xe91e62, 1);
+        this.hattackBar = graphics.fillRect(0, 0, 1, 4);
 
         this.path = 0;
         this.pathLen = 96;
@@ -73,7 +78,7 @@
             delay: 0,
             repeat: -1
         });
-
+        var music = this.music;
         this.spriteHeart.on('pointerdown', function (pointer){
             paused = true;
             tween.pause();
@@ -135,7 +140,6 @@
     }
 
     function dropEvent(){
-        if(!paused){
             var spriteDrop = this.add.sprite(32, 32, 'drop');
             spriteDrop.setScale(0.5);
             var tween = this.tweens.add({
@@ -148,13 +152,18 @@
                 repeat: -1
             });
             drops.push(spriteDrop);
-        }
     }
 
     function update () {
         var heart = this.spriteHeart;
         var human = this.spriteHuman;
 
+        this.hattackBar.scaleX = hattack;
+
+        if(hattack > 0){
+            hattack = hattack - 0.004;
+        }
+        
         if(hattack > 64){
             heart.destroy();
             human.destroy();
@@ -162,20 +171,20 @@
 
         }
 
-        var graphics = this.add.graphics();
-        graphics.fillStyle(0xe91e62, 1);
-        graphics.fillRect(0, 0, hattack, 4);
-
 
         // drops
 
-        drops.forEach(function(drop){
+        drops.forEach(function(drop, i){
             drop.y = drop.y+1;
             var rect = drop.getBounds();
             if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect)){
                 console.log("hit drop");
-                human.alpha = 1;
+                drops.splice(i,1);
                 drop.destroy();
+                if(human.alpha < 1){
+                    human.alpha = human.alpha + 0.25;
+                }
+
             }
         });
         // ghosts
@@ -192,14 +201,15 @@
                 ghost.y = ghost.y - ghostSpeed;
             }
             var rect = ghost.getBounds(); 
-            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect) && human.alpha === 1){
+            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect) && human.alpha > 0.25){
                 console.log("hit ghost");
-                human.alpha = 0.5;
+                human.alpha = human.alpha - 0.25;
                 ghosts.splice(i,1);
                 ghost.destroy();
             }
             if(Phaser.Geom.Rectangle.Overlaps(heart.getBounds(), rect)){
                 console.log("ghost hit heart");
+                hattack = hattack + 16;
                 ghosts.splice(i,1);
                 ghost.destroy();
                 heartTakesHit(heart);
@@ -267,12 +277,14 @@
             callbackScope: this,
             repeat: 1
         });
+        scene.music.setRate(0.5);
     }
 
     function unPause(heart){
         console.log('unpaused')
         heart.clearTint();
         paused = false;
+        scene.music.setRate(1.0);
     }
 
     function addDrop(){
