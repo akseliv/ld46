@@ -4,7 +4,6 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.22.0/dist/phaser.min.js"></script>
 </head>
 <body style="background-color: gray">
-
 <script>
     var config = {
         type: Phaser.WEBGL,
@@ -64,8 +63,6 @@
     {
         // text setup
 
-        
-
         this.gameoverText = this.add.bitmapText(0, 24,'nokia', 'game over',12).setInteractive();
         this.gameoverText.setVisible(false);
         this.gameoverText.on('pointerdown',function(pointer){
@@ -112,6 +109,7 @@
         var music = this.music;
         this.spriteHeart.on('pointerdown', function (pointer){
             paused = true;
+            scene.clickText.text = "";
             tween.pause();
             music.setRate(0.5);
         })
@@ -140,6 +138,8 @@
             callbackScope: this,
             repeat: -1
         });
+
+        this.clickText = this.add.bitmapText(24, 28,'nokia', 'click',8);
     }
 
     function ghostEvent() {
