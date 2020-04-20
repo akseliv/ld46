@@ -30,6 +30,8 @@
     var reversed = 0;
     var paused = false;
     var drops = [];
+    var ghosts = [];
+    var ghostSpeed = 0.16;
 
     function preload ()
     {
@@ -40,7 +42,7 @@
         this.load.image('heart', 'heart.png');
         this.load.image('human', 'human.png');
         this.load.image('drop', 'drop.png');
-        this.load.image('drop', 'drop.png');
+        this.load.image('ghost', 'ghost.png');
         this.angle1 = 0;
     }
 
@@ -53,7 +55,7 @@
         this.pathLen = 96;
         this.humanSpeed = 0.64;
         this.spriteHeart = this.add.sprite(32, 32, 'heart').setInteractive();
-        this.spriteHuman = this.add.sprite(16, 16, 'human').setInteractive();
+        this.spriteHuman = this.add.sprite(16, 16, 'human');
 
         var tween = this.tweens.add({
             targets: this.spriteHeart,
@@ -80,18 +82,54 @@
             this.clearTint();
         });
 
-        var timer = this.time.addEvent({
+        var dropTimer = this.time.addEvent({
             delay: 852,                // ms
-            callback: onEvent,
+            callback: dropEvent,
+            //args: [],
+            callbackScope: this,
+            repeat: -1
+        });
+
+        var ghostTimer = this.time.addEvent({
+            delay: 2500,                // ms
+            callback: ghostEvent,
             //args: [],
             callbackScope: this,
             repeat: -1
         });
     }
 
-    function onEvent(){
+    function ghostEvent() {
+        var x;
+        var y;
+        if(Phaser.Math.Between(0,1) == 1){
+
+            x = Phaser.Math.Between(0, 64);
+
+            if(Phaser.Math.Between(0,1) == 1){
+                y = 0;
+            }else{
+                y = 64;
+            }
+
+        }else{
+
+            y = Phaser.Math.Between(0, 64);
+
+            if(Phaser.Math.Between(0,1) == 1){
+                x = 0;
+            }else{
+                x = 64;
+            }
+
+        }
+        var sprite = this.add.sprite(x,y,'ghost')
+        ghosts.push(sprite);
+    }
+
+    function dropEvent(){
         if(!paused){
-            var spriteDrop = this.add.sprite(32, 32, 'drop').setInteractive();
+            var spriteDrop = this.add.sprite(32, 32, 'drop');
             spriteDrop.setScale(0.5);
             var tween = this.tweens.add({
                 targets: spriteDrop,
@@ -107,7 +145,8 @@
     }
 
     function update () {
-        // player vs. drops
+
+        // drops
         var human = this.spriteHuman;
         drops.forEach(function(drop){
             drop.y = drop.y+1;
@@ -117,6 +156,29 @@
                 drop.destroy();
             }
         });
+        // ghosts
+        var heart = this.spriteHeart;
+        ghosts.forEach(function(ghost){
+            if(ghost.x < heart.x){
+                ghost.x = ghost.x + ghostSpeed;
+            } else {
+                ghost.x = ghost.x - ghostSpeed;
+            } 
+            if(ghost.y < heart.y){
+                ghost.y = ghost.y + ghostSpeed;
+            } else {
+                ghost.y = ghost.y - ghostSpeed;
+            }
+            var rect = ghost.getBounds(); 
+            if(Phaser.Geom.Rectangle.Overlaps(human.getBounds(), rect)){
+                console.log("hit ghost");
+                ghost.destroy();
+            }
+            if(Phaser.Geom.Rectangle.Overlaps(heart.getBounds(), rect)){
+                console.log("ghost hit heart");
+                ghost.destroy();
+            }
+        })
 
         if(paused){
             var tint = Math.random() * 0xffffff;
